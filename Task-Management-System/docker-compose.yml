@@ -1,0 +1,59 @@
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/weatherforecast"]
+      interval: 30s
+      retries: 5
+    restart: always  # move restart here
+    networks:
+      - internal_network
+  
+  db:
+    image: postgres:latest
+    restart: always
+    environment:
+      - POSTGRES_DB=tms_db
+      - POSTGRES_USER=tms_user
+      - POSTGRES_PASSWORD=tms_pass
+    volumes:
+      - pgdata:/var/lib/postgres/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "tms_user", "-d", "tms_db"]
+      interval: 10s
+      retries: 5
+    networks:
+      - internal_network
+
+  app:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    depends_on:
+      - api
+    ports:
+      - 80:80
+    networks:
+      - internal_network
+
+  adminer:
+    image: adminer:latest
+    restart: always
+    depends_on:
+      - db
+    networks:
+      - internal_network
+    ports:
+      - 8081:8080  # example to expose adminer UI
+volumes:
+  pgdata: 
+
+networks:
+  internal_network:
+    driver: bridge
